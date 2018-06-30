@@ -1,0 +1,7 @@
+checkpoints/
+data/
+outdated/
+summaries/
+
+*.pyc
+*.csv

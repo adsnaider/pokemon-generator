@@ -119,7 +119,7 @@ class Generator(object):
                         activation=None,
                         padding='same',
                         name='deconv')
-                    output = tf.nn.sigmoid(deconv)
+                    output = tf.sigmoid(deconv)
         return output
 
     def get_variables(self):

@@ -27,10 +27,11 @@ flags.DEFINE_integer('batch_size', 32, 'Batch size for training')
 flags.DEFINE_integer('iterations', 150000, 'Number of trainig iterations')
 flags.DEFINE_integer('seed', 971,
                      'Seed to feed the tensorflow graph and numpy state')
-flags.DEFINE_float('G_iters_per_D', 0.2,
-                   'Ratio of iterations between generator and discriminator')
-flags.DEFINE_float('min_D_accuracy', 0.7, 'Minimum accuracy to run Generator')
-flags.DEFINE_integer('buffer_size', 50, 'Size of the accuracy buffer')
+flags.DEFINE_integer('G_steps', 1,
+                     'Number of concurrent steps to run Generator')
+flags.DEFINE_integer('D_steps', 5,
+                     'Number of concurrent steps to run Discriminatro')
+flags.DEFINE_integer('buffer_size', 30, 'Size of the accuracy buffer')
 
 flags.DEFINE_string('checkpoint_directory', 'checkpoints/',
                     'Directory to read and write checkpoints')
@@ -59,7 +60,7 @@ def _parse_record(example, image_size):
     image = tf.reshape(image, [215, 215, 4])
     image = tf.cast(image, tf.float32)
     image = tf.image.resize_images(image, [image_size, image_size])
-    image = image / 255    # Normalize
+    image = image / 255.0
 
     return image
 
@@ -224,15 +225,13 @@ def main(argv):
     accuracy_buffer = RingBuffer(config.buffer_size)
     accuracy_buffer.clear()
     while not sess.should_stop():
-        should_run_generator = accuracy_buffer.full(
-        ) and accuracy_buffer.mean() > config.min_D_accuracy
-        if should_run_generator:
-            sess.run_step_fn(
-                lambda step_context: step_generator(step_context, accuracy_buffer)
-            )
-        else:
+        for _ in xrange(config.D_steps):
             sess.run_step_fn(
                 lambda step_context: step_discriminator(step_context, accuracy_buffer)
+            )
+        for _ in xrange(config.G_steps):
+            sess.run_step_fn(
+                lambda step_context: step_generator(step_context, accuracy_buffer)
             )
 
     sess.close()
